@@ -16,6 +16,7 @@ import 'advanced_analytics_screen.dart';
 import 'notification_settings_screen.dart';
 import 'goals_management_screen.dart'; // 目標管理画面を追加
 import 'notification_service.dart'; // ファイル名を修正
+import 'transfer_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

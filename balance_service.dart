@@ -3,7 +3,86 @@ import 'models.dart';
 
 class BalanceService {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
+      static final DatabaseHelper _databaseHelper = DatabaseHelper();
 
+    // お金の移行を実行
+    static Future<bool> executeMoneyTransfer({
+      required String fromPaymentMethod,
+      required String toPaymentMethod,
+      required double amount,
+      String? memo,
+    }) async {
+      try {
+        // 移行元の残高チェック
+        final currentBalance = await getPaymentMethodBalance(fromPaymentMethod);
+        if (currentBalance < amount) {
+          throw Exception('残高不足です。現在の残高: ¥${currentBalance.toStringAsFixed(0)}');
+        }
+
+        // 移行記録を作成
+        final transfer = MoneyTransfer(
+          fromPaymentMethod: fromPaymentMethod,
+          toPaymentMethod: toPaymentMethod,
+          amount: amount,
+          memo: memo,
+          transferDate: DateTime.now(),
+        );
+
+        // データベースに記録
+        await _databaseHelper.insertMoneyTransfer(transfer);
+
+        // 残高を更新
+        await _updateBalanceAfterTransfer(fromPaymentMethod, toPaymentMethod, amount);
+
+        return true;
+      } catch (e) {
+        print('移行エラー: $e');
+        return false;
+      }
+    }
+
+    // 移行後の残高更新
+    static Future<void> _updateBalanceAfterTransfer(
+        String fromMethod, String toMethod, double amount) async {
+      // 移行元から減額
+      await _adjustPaymentMethodBalance(fromMethod, -amount);
+      // 移行先に加算
+      await _adjustPaymentMethodBalance(toMethod, amount);
+    }
+
+    // 支払い方法別残高の調整
+    static Future<void> _adjustPaymentMethodBalance(String paymentMethod, double amount) async {
+      // 既存の支払い方法データを取得し、残高を調整
+      // payment_methods テーブルがある場合の処理
+      final db = await _databaseHelper.database;
+      await db.rawUpdate(
+        'UPDATE payment_methods SET balance = balance + ? WHERE name = ?',
+        [amount, paymentMethod],
+      );
+    }
+
+    // 支払い方法別残高取得
+    static Future<double> getPaymentMethodBalance(String paymentMethod) async {
+      final db = await _databaseHelper.database;
+      final result = await db.query(
+        'payment_methods',
+        columns: ['balance'],
+        where: 'name = ?',
+        whereArgs: [paymentMethod],
+      );
+      
+      if (result.isNotEmpty) {
+        return result.first['balance'] as double;
+      }
+      return 0.0;
+    }
+
+    // 移行履歴取得
+    static Future<List<MoneyTransfer>> getTransferHistory() async {
+      return await _databaseHelper.getMoneyTransfers();
+    }
+  }
+  
   // 簡単な残高計算
   Future<Map<String, dynamic>> calculateSummary() async {
     try {

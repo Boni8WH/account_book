@@ -77,3 +77,45 @@ class Income {
     );
   }
 }
+
+// models.dart に追加
+class MoneyTransfer {
+  int? id;
+  String fromPaymentMethod;    // 移行元（例：銀行口座）
+  String toPaymentMethod;      // 移行先（例：電子マネー）
+  double amount;               // 移行金額
+  String? memo;                // メモ（オプション）
+  DateTime transferDate;       // 移行日時
+  
+  MoneyTransfer({
+    this.id,
+    required this.fromPaymentMethod,
+    required this.toPaymentMethod,
+    required this.amount,
+    this.memo,
+    required this.transferDate,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'fromPaymentMethod': fromPaymentMethod,
+      'toPaymentMethod': toPaymentMethod,
+      'amount': amount,
+      'memo': memo,
+      'transferDate': transferDate.toIso8601String(),
+    };
+  }
+
+  factory MoneyTransfer.fromMap(Map<String, dynamic> map) {
+    return MoneyTransfer(
+      id: map['id'],
+      fromPaymentMethod: map['fromPaymentMethod'],
+      toPaymentMethod: map['toPaymentMethod'],
+      amount: map['amount'],
+      memo: map['memo'],
+      transferDate: DateTime.parse(map['transferDate']),
+    );
+  }
+}
+

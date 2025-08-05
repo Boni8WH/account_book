@@ -84,7 +84,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 目標管理テーブルを追加
     await db.execute('''
       CREATE TABLE savings_goals(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,6 +99,62 @@ class DatabaseHelper {
         updated_at TEXT
       )
     ''');
+    
+    await db.execute('''
+      CREATE TABLE money_transfers(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fromPaymentMethod TEXT NOT NULL,
+        toPaymentMethod TEXT NOT NULL,
+        amount REAL NOT NULL,
+        memo TEXT,
+        transferDate TEXT NOT NULL
+      )
+    ''');
+
+    // お金の移行記録を挿入
+    Future<int> insertMoneyTransfer(MoneyTransfer transfer) async {
+      final db = await database;
+      return await db.insert('money_transfers', transfer.toMap());
+    }
+
+    // お金の移行記録を取得
+    Future<List<MoneyTransfer>> getMoneyTransfers() async {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'money_transfers',
+        orderBy: 'transferDate DESC',
+      );
+      
+      return List.generate(maps.length, (i) {
+        return MoneyTransfer.fromMap(maps[i]);
+      });
+    }
+
+    // 特定期間の移行記録を取得
+    Future<List<MoneyTransfer>> getMoneyTransfersByDateRange(
+        DateTime startDate, DateTime endDate) async {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'money_transfers',
+        where: 'transferDate BETWEEN ? AND ?',
+        whereArgs: [startDate.toIso8601String(), endDate.toIso8601String()],
+        orderBy: 'transferDate DESC',
+      );
+      
+      return List.generate(maps.length, (i) {
+        return MoneyTransfer.fromMap(maps[i]);
+      });
+    }
+
+    // 移行記録を削除
+    Future<void> deleteMoneyTransfer(int id) async {
+      final db = await database;
+      await db.delete(
+        'money_transfers',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
 
     await _insertDefaultPaymentMethods(db);
     await _insertDefaultBudgets(db);
